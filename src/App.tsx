@@ -5,12 +5,14 @@ function App() {
   const headerRef = useRef(null); // Ref for the header to append the canvas
   const animationFrameId = useRef<number | null>(null); // To store animation frame ID for cleanup
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Refs for sections to observe for animations
   const sectionRefs = {
     summary: useRef<HTMLElement>(null),
     skills: useRef<HTMLElement>(null),
     experience: useRef<HTMLElement>(null),
+    projects: useRef<HTMLElement>(null),
     achievements: useRef<HTMLElement>(null),
     education: useRef<HTMLElement>(null),
   };
@@ -20,6 +22,7 @@ function App() {
     summary: false,
     skills: false,
     experience: false,
+    projects: false,
     achievements: false,
     education: false,
   });
@@ -189,13 +192,71 @@ function App() {
       <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
       {/* Navigation Bar */}
-      <nav className="sticky top-0 z-50 bg-white bg-opacity-95 shadow-lg py-4 px-2 rounded-b-xl backdrop-blur-sm"> {/* Reduced px for mobile */}
-        <div className="container mx-auto flex justify-center flex-wrap space-x-2 md:space-x-10"> {/* Adjusted space-x and added flex-wrap for mobile */}
-          <a href="#summary" className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-300 text-[0.65rem] sm:text-xs md:text-base px-1 py-0.5 rounded-md">Summary</a> {/* Smaller text and added padding for touch targets */}
-          <a href="#skills" className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-300 text-[0.65rem] sm:text-xs md:text-base px-1 py-0.5 rounded-md">Skills</a>
-          <a href="#experience" className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-300 text-[0.65rem] sm:text-xs md:text-base px-1 py-0.5 rounded-md">Experience</a>
-          <a href="#achievements" className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-300 text-[0.65rem] sm:text-xs md:text-base px-1 py-0.5 rounded-md">Achievements</a>
-          <a href="#education" className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-300 text-[0.65rem] sm:text-xs md:text-base px-1 py-0.5 rounded-md">Education</a>
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md shadow-md transition-all duration-300">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo/Brand for Mobile */}
+            <div className="flex-shrink-0 flex items-center md:hidden">
+              <span className="font-bold text-xl text-blue-900">Portfolio</span>
+            </div>
+
+            {/* Desktop Menu */}
+            <div className="hidden md:flex justify-center w-full space-x-1 lg:space-x-8">
+              {['Summary', 'Skills', 'Experience', 'Projects', 'Achievements', 'Education'].map((item) => (
+                <a
+                  key={item}
+                  href={`#${item.toLowerCase()}`}
+                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-300 text-sm lg:text-base px-3 py-2 rounded-md hover:bg-blue-50"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  {item}
+                </a>
+              ))}
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="flex items-center md:hidden">
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                aria-expanded="false"
+              >
+                <span className="sr-only">Open main menu</span>
+                {isMobileMenuOpen ? (
+                  <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        <div className={`${isMobileMenuOpen ? 'block' : 'hidden'} md:hidden bg-white border-t border-gray-100 shadow-lg absolute w-full left-0`}>
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+            {['Summary', 'Skills', 'Experience', 'Projects', 'Achievements', 'Education'].map((item) => (
+              <a
+                key={item}
+                href={`#${item.toLowerCase()}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsMobileMenuOpen(false);
+                  document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+              >
+                {item}
+              </a>
+            ))}
+          </div>
         </div>
       </nav>
 
@@ -204,14 +265,14 @@ function App() {
         {/* Content of the header */}
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between relative z-10"> {/* z-10 to keep content above 3D */}
           <div className="text-center md:text-left mb-6 md:mb-0">
-            <h1 className="text-4xl md:text-6xl font-extrabold mb-2 leading-tight">Ragul Sethuraman</h1>
-            <p className="text-xl md:text-3xl font-light opacity-90">Full-Stack Developer | 3+ Years Experience</p>
-            <p className="text-lg md:text-xl font-light opacity-80 mt-2">MEAN Stack | MERN Stack | AWS | Tailwindcss | PostgresSQL</p>
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold mb-2 leading-tight">Ragul Sethuraman</h1>
+            <p className="text-lg sm:text-xl md:text-3xl font-light opacity-90">Full-Stack Developer | 3+ Years Experience</p>
+            <p className="text-base sm:text-lg md:text-xl font-light opacity-80 mt-2">MEAN Stack | MERN Stack | AWS | Tailwindcss | PostgresSQL</p>
           </div>
           <div className="flex flex-col items-center md:items-end space-y-3">
-            <a href="mailto:sragul1912@gmail.com" className="flex items-center text-white hover:text-blue-200 transition-colors duration-300 text-lg">
+            <a href="mailto:ragul.sethuraman1999@gmail.com" className="flex items-center text-white hover:text-blue-200 transition-colors duration-300 text-lg">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail mr-3"><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
-              sragul1912@gmail.com
+              ragul.sethuraman1999@gmail.com
             </a>
             <a href="tel:+917397363765" className="flex items-center text-white hover:text-blue-200 transition-colors duration-300 text-lg">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-phone mr-3"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-1.18 2.19l-.7.69a19 19 0 0 0 6 6l.69-.7a2 2 0 0 1 2.19-1.18 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
@@ -225,12 +286,12 @@ function App() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-12 max-w-5xl">
+      <main className="container mx-auto px-4 py-6 md:py-12 max-w-5xl">
         {/* Summary Section */}
         <section
           id="summary"
           ref={sectionRefs.summary}
-          className={`bg-white p-8 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('summary')}`}
+          className={`bg-white p-6 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('summary')}`}
         >
           <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-6 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user mr-4"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
@@ -249,7 +310,7 @@ function App() {
         <section
           id="skills"
           ref={sectionRefs.skills}
-          className={`bg-white p-8 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('skills')}`}
+          className={`bg-white p-6 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('skills')}`}
         >
           <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-6 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-wrench mr-4"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.77 3.77Z" /><path d="m14.7 6.3 1.6 1.6" /></svg>
@@ -371,7 +432,7 @@ function App() {
         <section
           id="experience"
           ref={sectionRefs.experience}
-          className={`bg-white p-8 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('experience')}`}
+          className={`bg-white p-6 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('experience')}`}
         >
           <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-6 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-briefcase mr-4"><rect width="20" height="14" x="2" y="7" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
@@ -410,11 +471,49 @@ function App() {
           </div>
         </section>
 
+        {/* Personal Projects Section */}
+        <section
+          id="projects"
+          ref={sectionRefs.projects}
+          className={`bg-white p-8 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('projects')}`}
+        >
+          <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-6 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-rocket mr-4"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" /><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" /><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" /><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" /></svg>
+            Personal Projects
+          </h2>
+          <div className="space-y-8">
+            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300 relative overflow-hidden">
+              {/* Building Stage Badge */}
+              <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-bl-lg shadow-sm z-10">
+                Building Stage
+              </div>
+
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+                <h3 className="text-2xl font-semibold text-blue-700">StyleLab</h3>
+                <a href="https://styleslab.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-sm md:text-base mt-2 md:mt-0 flex items-center">
+                  Visit Website
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+                </a>
+              </div>
+
+              <p className="text-lg text-gray-700 mb-4">
+                An AI-powered CSS generator featuring 18+ free tools including Flexbox, Grid, Gradient, and Animation generators.
+              </p>
+
+              <ul className="list-disc list-inside space-y-2 text-gray-700">
+                <li>Comprehensive suite of CSS tools to streamline web design.</li>
+                <li>Includes performance optimization analysis and accessibility checking.</li>
+                <li>Designed for developers to quickly generate and test CSS properties.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
         {/* Achievements Section */}
         <section
           id="achievements"
           ref={sectionRefs.achievements}
-          className={`bg-white p-8 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('achievements')}`}
+          className={`bg-white p-6 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('achievements')}`}
         >
           <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-6 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-award mr-4"><circle cx="12" cy="8" r="6" /><path d="M15.477 12.89L17.18 21l-5.15-3.62L6.82 21l1.703-8.11" /></svg>
@@ -444,7 +543,7 @@ function App() {
         <section
           id="education"
           ref={sectionRefs.education}
-          className={`bg-white p-8 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('education')}`}
+          className={`bg-white p-6 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('education')}`}
         >
           <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-6 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-graduation-cap mr-4"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v4c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2v-4" /><path d="M12 22v-6" /></svg>
@@ -463,7 +562,7 @@ function App() {
       {showBackToTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 z-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75"
+          className="fixed bottom-4 right-4 md:bottom-8 md:right-8 bg-blue-600 text-white p-3 md:p-4 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 z-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75"
           aria-label="Back to top"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-up"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></svg>
