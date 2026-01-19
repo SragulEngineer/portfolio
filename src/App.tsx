@@ -267,7 +267,7 @@ function App() {
           <div className="text-center md:text-left mb-6 md:mb-0">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold mb-2 leading-tight">Ragul Sethuraman</h1>
             <p className="text-lg sm:text-xl md:text-3xl font-light opacity-90">Full-Stack Developer | 3+ Years Experience</p>
-            <p className="text-base sm:text-lg md:text-xl font-light opacity-80 mt-2">MEAN Stack | MERN Stack | AWS | Tailwindcss | PostgresSQL</p>
+            <p className="text-base sm:text-lg md:text-xl font-light opacity-80 mt-2">MEAN Stack | AWS | Tailwindcss | PostgresSQL</p>
           </div>
           <div className="flex flex-col items-center md:items-end space-y-3">
             <a href="mailto:ragul.sethuraman1999@gmail.com" className="flex items-center text-white hover:text-blue-200 transition-colors duration-300 text-lg">
@@ -299,7 +299,7 @@ function App() {
           </h2>
           <p className="text-lg md:text-xl leading-relaxed text-gray-700">
             Full-Stack Developer with 3+ years of hands-on experience building scalable enterprise-grade web applications using the
-            MEAN stack (MongoDB, Express.js, Angular, Node.js) and MERN stack(MongoDB, Express.js, React, Node.js). Adept at designing robust RESTful APIs, integrating cloud
+            MEAN stack (MongoDB, Express.js, Angular, Node.js) and MERN stack(MongoDB, Express.js, Node.js). Adept at designing robust RESTful APIs, integrating cloud
             services (AWS S3), implementing CI/CD (GitHub Actions, Jenkins), and following Agile methodologies. Known for
             delivering impactful, user-centric applications including AI-powered learning platforms and automation tools. Seeking
             opportunities to leverage full-stack expertise to solve complex business problems.
@@ -321,7 +321,7 @@ function App() {
             <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
               <h3 className="text-2xl font-semibold text-blue-700 mb-4">Frontend</h3>
               <ul className="space-y-2">
-                {['React.js', 'Angular', 'TypeScript', 'JavaScript', 'HTML', 'CSS', 'Bootstrap'].map(skill => (
+                {['Angular', 'TypeScript', 'JavaScript', 'HTML', 'CSS', 'Bootstrap'].map(skill => (
                   <li key={skill} className="flex items-center text-gray-700 text-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-2 text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></svg>
                     {skill}
