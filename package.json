@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://Sraguldeveloper.github.io/portfolio",
+  "homepage": "https://SragulEngineer.github.io/portfolio",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
