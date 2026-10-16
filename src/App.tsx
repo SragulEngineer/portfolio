@@ -1,578 +1,745 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import * as THREE from 'three';
+import React, { useState, useEffect } from 'react';
+import {
+  Mail,
+  Phone,
+  Linkedin,
+  MapPin,
+  ExternalLink,
+  Briefcase,
+  Award,
+  GraduationCap,
+  Code2,
+  Server,
+  Database,
+  Terminal,
+  CheckCircle2,
+  Sparkles,
+  Cpu,
+  Copy,
+  Check,
+  ArrowUp,
+  FileText,
+  Send,
+  Globe,
+  Bot,
+  Workflow,
+  ShieldCheck,
+  Zap,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 
-function App() {
-  const headerRef = useRef(null); // Ref for the header to append the canvas
-  const animationFrameId = useRef<number | null>(null); // To store animation frame ID for cleanup
+import {
+  PERSONAL_INFO,
+  EXPERIENCES,
+  PROJECTS,
+  CERTIFICATIONS,
+  EDUCATION,
+  getExperienceDetails,
+} from './data/portfolioData';
+import { Navbar } from './components/Navbar';
+import { HeroCanvas } from './components/HeroCanvas';
+import { ResumeModal } from './components/ResumeModal';
+
+export function App() {
+  const [isResumeOpen, setIsResumeOpen] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const [copiedPhone, setCopiedPhone] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showEarlierWork, setShowEarlierWork] = useState(false);
 
-  // Refs for sections to observe for animations
-  const sectionRefs = {
-    summary: useRef<HTMLElement>(null),
-    skills: useRef<HTMLElement>(null),
-    experience: useRef<HTMLElement>(null),
-    projects: useRef<HTMLElement>(null),
-    achievements: useRef<HTMLElement>(null),
-    education: useRef<HTMLElement>(null),
-  };
-
-  // State to track if a section is in view
-  const [inView, setInView] = useState({
-    summary: false,
-    skills: false,
-    experience: false,
-    projects: false,
-    achievements: false,
-    education: false,
+  // Theme state: checks localStorage, system preference, or defaults to 'dark'
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'dark';
   });
 
-  // Intersection Observer callback
-  const observerCallback = useCallback((entries: IntersectionObserverEntry[]) => {
-    entries.forEach(entry => {
-      const sectionId = entry.target.id;
-      // Ensure sectionId is a valid key before updating state
-      if (Object.keys(inView).includes(sectionId)) {
-        setInView(prev => ({
-          ...prev,
-          [sectionId as keyof typeof inView]: entry.isIntersecting,
-        }));
-      }
-    });
-  }, [inView]); // Dependency on inView to ensure observer is recreated if inView structure changes (unlikely here)
-
   useEffect(() => {
-    // Setup Intersection Observer for sections
-    const observer = new IntersectionObserver(observerCallback, {
-      root: null, // viewport
-      rootMargin: '0px',
-      threshold: 0.1, // Trigger when 10% of the section is visible
-    });
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
-    // Observe each section
-    Object.values(sectionRefs).forEach(ref => {
-      if (ref.current) {
-        observer.observe(ref.current);
-      }
-    });
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
-    // Cleanup Intersection Observer
-    return () => {
-      Object.values(sectionRefs).forEach(ref => {
-        if (ref.current) {
-          observer.unobserve(ref.current);
-        }
-      });
-      observer.disconnect();
-    };
-  }, [observerCallback, sectionRefs]); // Added sectionRefs to dependencies
+  const expInfo = getExperienceDetails();
 
-  // Three.js setup for the header background
-  useEffect(() => {
-    if (!headerRef.current) return;
+  // Contact form state
+  const [formState, setFormState] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: '',
+  });
+  const [formSent, setFormSent] = useState(false);
 
-    // Scene setup
-    const scene = new THREE.Scene();
-    scene.background = null; // Make background transparent
-
-    // Camera setup
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight * 0.4), 0.1, 1000);
-    camera.position.z = 2;
-
-    // Renderer setup
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); // alpha: true for transparent background
-    renderer.setSize(window.innerWidth, window.innerHeight * 0.4); // Set size to 40% of viewport height
-    renderer.setPixelRatio(window.devicePixelRatio);
-
-    // Append renderer's DOM element to the header
-    const currentHeaderRef = headerRef.current;
-    currentHeaderRef.appendChild(renderer.domElement);
-
-    // Style the canvas to be absolute and cover the header
-    renderer.domElement.style.position = 'absolute';
-    renderer.domElement.style.top = '0';
-    renderer.domElement.style.left = '0';
-    renderer.domElement.style.width = '100%';
-    renderer.domElement.style.height = '100%';
-    renderer.domElement.style.zIndex = '0'; // Ensure it's behind the content
-    renderer.domElement.style.pointerEvents = 'none'; // Allow clicks to pass through
-
-    // Add a simple 3D object (e.g., a Dodecahedron)
-    const geometry = new THREE.DodecahedronGeometry(0.8, 0); // Smaller size
-    const material = new THREE.MeshPhongMaterial({
-      color: 0x87CEEB, // Sky blue
-      emissive: 0x000000,
-      specular: 0x000000,
-      shininess: 0,
-      flatShading: true,
-      transparent: true,
-      opacity: 0.7 // Slightly transparent
-    });
-    const dodecahedron = new THREE.Mesh(geometry, material);
-    scene.add(dodecahedron);
-
-    // Add subtle lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Soft ambient light
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // Directional light
-    directionalLight.position.set(1, 1, 1).normalize();
-    scene.add(directionalLight);
-
-    // Animation loop
-    const animate = () => {
-      animationFrameId.current = requestAnimationFrame(animate);
-
-      dodecahedron.rotation.x += 0.002;
-      dodecahedron.rotation.y += 0.003;
-
-      renderer.render(scene, camera);
-    };
-
-    // Handle window resize
-    const onWindowResize = () => {
-      const newWidth = window.innerWidth;
-      const newHeight = window.innerHeight * 0.4;
-      camera.aspect = newWidth / newHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(newWidth, newHeight);
-    };
-
-    window.addEventListener('resize', onWindowResize);
-
-    animate(); // Start animation
-
-    // Cleanup function
-    return () => {
-      window.removeEventListener('resize', onWindowResize);
-      if (animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
-      }
-      if (currentHeaderRef && renderer.domElement) {
-        currentHeaderRef.removeChild(renderer.domElement);
-      }
-      renderer.dispose(); // Dispose of the renderer
-      geometry.dispose(); // Dispose of geometry
-      material.dispose(); // Dispose of material
-    };
-  }, []); // Empty dependency array means this runs once on mount
-
-  // Handle scroll for Back to Top button
+  // Scroll listener for back to top
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 300) { // Show button after scrolling 300px
-        setShowBackToTop(true);
-      } else {
-        setShowBackToTop(false);
-      }
+      setShowBackToTop(window.scrollY > 400);
     };
-
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+  const copyToClipboard = (text: string, type: 'email' | 'phone') => {
+    navigator.clipboard.writeText(text);
+    if (type === 'email') {
+      setCopiedEmail(true);
+      setTimeout(() => setCopiedEmail(false), 2500);
+    } else {
+      setCopiedPhone(true);
+      setTimeout(() => setCopiedPhone(false), 2500);
+    }
   };
 
-  // Helper function to get animation classes
-  const getAnimationClasses = (sectionId: keyof typeof inView) =>
-    inView[sectionId] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10';
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formState.email || !formState.message) return;
+
+    const mailtoUrl = `mailto:${PERSONAL_INFO.email}?subject=${encodeURIComponent(
+      formState.subject || 'Portfolio Inquiry from ' + formState.name
+    )}&body=${encodeURIComponent(
+      `Name: ${formState.name}\nEmail: ${formState.email}\n\nMessage:\n${formState.message}`
+    )}`;
+
+    window.open(mailtoUrl, '_blank');
+    setFormSent(true);
+    setTimeout(() => {
+      setFormSent(false);
+      setFormState({ name: '', email: '', subject: '', message: '' });
+    }, 4000);
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Curated work: 3 flagship projects
+  const flagshipProjects = [
+    {
+      id: 'charter-agent',
+      title: 'AI Story-Elicitation Agent',
+      client: 'Client: Charter Communications',
+      role: 'Lead Developer',
+      subtitle: 'Multi-agent backlog synthesis with React human-in-the-loop preview interface',
+      description: 'Architected an autonomous multi-agent pipeline transforming Jira epics, design files, and enterprise documents into investment-compliant user stories with traceable acceptance criteria.',
+      impact: [
+        'Integrated automated retrieval of business rules from Confluence/Chalk with evidence-backed citations.',
+        'Engineered cross-project duplicate detection to eliminate redundant backlog grooming effort.',
+        'Built human-in-the-loop validation interface with React ensuring zero unintended Jira writes.',
+      ],
+      tags: ['LangGraph', 'Python', 'React', 'TypeScript', 'RAG', 'Vector DBs', 'Jira API', 'MCP'],
+      badge: 'Telecom AI Lead',
+    },
+    {
+      id: 'tmobile-agent',
+      title: 'Multi-Agent Refund Orchestrator',
+      client: 'Client: T-Mobile US',
+      role: 'AI Agent Lead',
+      subtitle: 'Stateful autonomous decision engine for complex refund processing',
+      description: 'Architected a stateful multi-agent system using LangGraph and Python to automate complex customer refund request processing based on granular business logic stored in JSON configs.',
+      impact: [
+        'Designed autonomous agents that interact to verify transaction history, evaluate policy rules, and approve refunds.',
+        'Dynamic decision engine driven by configurable JSON business logic.',
+        'Engineered resilient, production-ready Python AI microservices.',
+      ],
+      tags: ['LangGraph', 'Python', 'Stateful Graphs', 'Autonomous Agents', 'Decision Engine', 'REST APIs'],
+      badge: 'Multi-Agent System',
+    },
+    {
+      id: 'stylelab',
+      title: 'StyleLab',
+      client: 'Personal Tool Suite',
+      role: 'Creator & Developer',
+      subtitle: 'AI-assisted modern CSS generator hosted on Vercel',
+      description: 'An all-in-one developer productivity platform featuring 18+ interactive CSS generators (Grid, Flexbox, Gradients, Keyframe Animations, Glassmorphism) with live code export and WCAG accessibility checking.',
+      impact: [
+        '18+ visual CSS tool modules with instant cross-browser code export.',
+        'Built-in contrast ratio analysis and WCAG accessibility checking.',
+        'Actively deployed and maintained on Vercel.',
+      ],
+      tags: ['React', 'TypeScript', 'Tailwind CSS', 'Vite', 'Vercel'],
+      liveUrl: 'https://styleslab.vercel.app/',
+      badge: 'Live in Production',
+    },
+  ];
+
+  // Secondary enterprise systems
+  const earlierProjects = [
+    {
+      title: 'Adaptive Course Creator (R-CAT)',
+      role: 'Full-Stack Developer • Infosys Internal',
+      description: 'Dynamic learning platform that personalizes curriculum modules based on user telemetry, cutting user drop-off by 40% and boosting engagement by 60%.',
+      tags: ['Angular', 'Node.js', 'Express.js', 'MongoDB'],
+    },
+    {
+      title: 'AI Emulator – Game-Based Learning',
+      role: 'Full-Stack Developer • Infosys Internal',
+      description: 'Gamified simulation platform utilizing custom AI scoring algorithms and real-time behavioral telemetry, achieving 45% higher retention and a 4.8/5 satisfaction rating.',
+      tags: ['AI Scoring', 'Node.js', 'Express.js', 'Angular'],
+    },
+  ];
+
+  // Clean, concise skill clusters
+  const skillClusters = [
+    {
+      category: 'AI & Multi-Agent Systems',
+      icon: Bot,
+      skills: ['LangGraph (Multi-Agent Systems)', 'Python', 'LangChain', 'Prompt Engineering', 'RAG', 'Vector Databases', 'MCP (Model Context Protocol)', 'Fine-Tuning Transformers'],
+    },
+    {
+      category: 'Agentic Tooling & Developer Velocity',
+      icon: Zap,
+      skills: ['Claude Code (Agentic CLI)', 'Kiro AI', 'Cursor AI', 'MCP Server Integrations', 'Automated Code Generation'],
+    },
+    {
+      category: 'Frontend & Backend Engineering',
+      icon: Code2,
+      skills: ['React', 'Angular', 'TypeScript', 'JavaScript (ES6+)', 'Node.js', 'Express.js', 'RESTful APIs', 'Microservices', 'Tailwind CSS', 'Bootstrap'],
+    },
+    {
+      category: 'Databases & Tools',
+      icon: Database,
+      skills: ['MongoDB (NoSQL)', 'PostgreSQL', 'Git', 'Jira', 'Postman', 'OpenSearch (Logging)', 'Playwright (Testing)'],
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 font-inter text-gray-800 antialiased">
-      {/* Tailwind CSS CDN */}
-      <script src="https://cdn.tailwindcss.com"></script>
-      {/* Google Fonts - Inter */}
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-      {/* Three.js CDN */}
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans selection:bg-sky-500/20 selection:text-sky-600 dark:selection:text-sky-300 relative overflow-x-hidden transition-colors duration-300">
+      {/* Background ambient lighting */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-sky-500/10 dark:bg-sky-600/10 rounded-full blur-[140px] transform -translate-y-1/2" />
+        <div className="absolute top-1/2 right-10 w-[450px] h-[450px] bg-cyan-500/10 dark:bg-cyan-600/10 rounded-full blur-[140px]" />
+        <div className="absolute inset-0 bg-grid-pattern opacity-35" />
+      </div>
 
-      {/* Navigation Bar */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md shadow-md transition-all duration-300">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo/Brand for Mobile */}
-            <div className="flex-shrink-0 flex items-center md:hidden">
-              <span className="font-bold text-xl text-blue-900">Portfolio</span>
-            </div>
+      {/* Navigation */}
+      <Navbar
+        onOpenResume={() => setIsResumeOpen(true)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
 
-            {/* Desktop Menu */}
-            <div className="hidden md:flex justify-center w-full space-x-1 lg:space-x-8">
-              {['Summary', 'Skills', 'Experience', 'Projects', 'Achievements', 'Education'].map((item) => (
-                <a
-                  key={item}
-                  href={`#${item.toLowerCase()}`}
-                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-300 text-sm lg:text-base px-3 py-2 rounded-md hover:bg-blue-50"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                >
-                  {item}
-                </a>
-              ))}
-            </div>
+      {/* ===================== HERO SECTION ===================== */}
+      <section
+        id="home"
+        className="relative min-h-[85vh] flex items-center justify-center pt-28 pb-16 px-4 sm:px-6 lg:px-8 overflow-hidden z-10"
+      >
+        <HeroCanvas theme={theme} />
 
-            {/* Mobile Menu Button */}
-            <div className="flex items-center md:hidden">
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-                aria-expanded="false"
-              >
-                <span className="sr-only">Open main menu</span>
-                {isMobileMenuOpen ? (
-                  <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                )}
-              </button>
-            </div>
+        <div className="relative z-10 max-w-4xl mx-auto text-center flex flex-col items-center">
+          {/* Status Badge */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-sm mb-6 backdrop-blur-md">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
+              Open to Roles • <span className="text-sky-600 dark:text-sky-400 font-semibold">{expInfo.displayYears} Experience</span>
+            </span>
+          </div>
+
+          {/* Main Title & Role */}
+          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-3">
+            {PERSONAL_INFO.name}
+          </h1>
+
+          <p className="text-lg sm:text-xl font-bold text-sky-600 dark:text-sky-400 mb-4">
+            Full-Stack AI Engineer <span className="text-slate-400 dark:text-slate-500 font-normal">|</span> Associate Consultant @ Infosys
+          </p>
+
+          <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 mb-8 max-w-2xl leading-relaxed">
+            Architecting production <span className="text-slate-900 dark:text-white font-semibold">AI Multi-Agent Systems</span> with{' '}
+            <span className="text-sky-600 dark:text-sky-400 font-semibold">LangGraph & Python</span> for Fortune 500 telecom leaders (
+            <strong className="text-slate-800 dark:text-slate-200">Charter Communications</strong>,{' '}
+            <strong className="text-slate-800 dark:text-slate-200">T-Mobile US</strong>), powered by modern agentic tooling (
+            <span className="text-cyan-600 dark:text-cyan-300 font-medium">Claude Code</span>, <span className="text-cyan-600 dark:text-cyan-300 font-medium">Kiro</span>) and full-stack engineering.
+          </p>
+
+          {/* Action CTAs */}
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+            <a
+              href="#work"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-white bg-gradient-to-r from-sky-600 to-cyan-500 hover:from-sky-500 hover:to-cyan-400 shadow-md shadow-sky-600/25 transition-all hover:scale-105 active:scale-95"
+            >
+              <Bot className="w-4 h-4" />
+              <span>Featured Work</span>
+            </a>
+
+            <button
+              onClick={() => setIsResumeOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:scale-105 active:scale-95"
+            >
+              <FileText className="w-4 h-4 text-sky-500 dark:text-sky-400" />
+              <span>Full Resume</span>
+            </button>
+
+            <button
+              onClick={() => copyToClipboard(PERSONAL_INFO.email, 'email')}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white/80 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 transition-all"
+            >
+              {copiedEmail ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                  <span className="text-emerald-600 dark:text-emerald-400">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 text-slate-400" />
+                  <span>Copy Email</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Quick Info Strip */}
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 text-slate-400" />
+              {PERSONAL_INFO.location}
+            </span>
+            <span>•</span>
+            <a
+              href={PERSONAL_INFO.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-sky-600 dark:text-sky-400 hover:underline font-medium"
+            >
+              <Linkedin className="w-3.5 h-3.5" />
+              LinkedIn Profile
+            </a>
+            <span>•</span>
+            <a
+              href={`mailto:${PERSONAL_INFO.email}`}
+              className="hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              {PERSONAL_INFO.email}
+            </a>
           </div>
         </div>
+      </section>
 
-        {/* Mobile Menu */}
-        <div className={`${isMobileMenuOpen ? 'block' : 'hidden'} md:hidden bg-white border-t border-gray-100 shadow-lg absolute w-full left-0`}>
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            {['Summary', 'Skills', 'Experience', 'Projects', 'Achievements', 'Education'].map((item) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsMobileMenuOpen(false);
-                  document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+      {/* ===================== FEATURED WORK & CLIENT SYSTEMS ===================== */}
+      <section id="work" className="py-16 px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-4 border-b border-slate-200 dark:border-slate-800/80">
+            <div>
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                Portfolio Highlights
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-1">
+                Featured Work & Systems
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 sm:mt-0">
+              Selected production AI agents and live developer utilities
+            </p>
+          </div>
+
+          {/* 3 Flagship Cards */}
+          <div className="space-y-6">
+            {flagshipProjects.map((project) => (
+              <div
+                key={project.id}
+                className="glass-panel p-6 sm:p-7 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-sky-500/40 transition-all duration-300 shadow-sm"
               >
-                {item}
-              </a>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sky-50 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30">
+                      {project.client}
+                    </span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      {project.role}
+                    </span>
+                  </div>
+                  {project.liveUrl && (
+                    <a
+                      href={project.liveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline"
+                    >
+                      <span>Visit Live Website</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
+                  {project.title}
+                </h3>
+                <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-3">
+                  {project.subtitle}
+                </p>
+
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
+                  {project.description}
+                </p>
+
+                {/* Impact Bullets */}
+                <ul className="space-y-1.5 mb-5 text-xs text-slate-600 dark:text-slate-300">
+                  {project.impact.map((point, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Tech Badges */}
+                <div className="flex flex-wrap gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                  {project.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
+                        tag === 'React' || tag === 'LangGraph' || tag === 'Python'
+                          ? 'bg-sky-50 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-500/30 font-semibold'
+                          : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700/60'
+                      }`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
+
+          {/* Expandable Earlier Work */}
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => setShowEarlierWork(!showEarlierWork)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm transition-all"
+            >
+              <span>{showEarlierWork ? 'Hide earlier enterprise systems' : 'View earlier enterprise systems (R-CAT & AI Emulator)'}</span>
+              {showEarlierWork ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+
+            {showEarlierWork && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 text-left animate-in fade-in duration-300">
+                {earlierProjects.map((ep, idx) => (
+                  <div
+                    key={idx}
+                    className="glass-panel p-5 rounded-xl border border-slate-200 dark:border-slate-800"
+                  >
+                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                      {ep.role}
+                    </span>
+                    <h4 className="font-bold text-slate-900 dark:text-white text-base mb-1.5">
+                      {ep.title}
+                    </h4>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-relaxed">
+                      {ep.description}
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {ep.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="px-2 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </nav>
+      </section>
 
-      {/* Header Section */}
-      <header ref={headerRef} className="relative bg-gradient-to-br from-blue-700 to-blue-900 text-white p-6 md:p-12 shadow-xl rounded-b-3xl overflow-hidden min-h-[200px] md:min-h-[300px] flex items-center justify-center">
-        {/* Content of the header */}
-        <div className="container mx-auto flex flex-col md:flex-row items-center justify-between relative z-10"> {/* z-10 to keep content above 3D */}
-          <div className="text-center md:text-left mb-6 md:mb-0">
-            <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold mb-2 leading-tight">Ragul Sethuraman</h1>
-            <p className="text-lg sm:text-xl md:text-3xl font-light opacity-90">Full-Stack Developer | 3+ Years Experience</p>
-            <p className="text-base sm:text-lg md:text-xl font-light opacity-80 mt-2">MEAN Stack | AWS | Tailwindcss | PostgresSQL</p>
+      {/* ===================== SKILLS & TECH STACK ===================== */}
+      <section id="skills" className="py-16 px-4 sm:px-6 lg:px-8 relative z-10 bg-slate-100/50 dark:bg-slate-950/50">
+        <div className="max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="mb-8 pb-4 border-b border-slate-200 dark:border-slate-800/80">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+              Technical Stack
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-1">
+              Core Skills & Tools
+            </h2>
           </div>
-          <div className="flex flex-col items-center md:items-end space-y-3">
-            <a href="mailto:ragul.sethuraman1999@gmail.com" className="flex items-center text-white hover:text-blue-200 transition-colors duration-300 text-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail mr-3"><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
-              ragul.sethuraman1999@gmail.com
-            </a>
-            <a href="tel:+917397363765" className="flex items-center text-white hover:text-blue-200 transition-colors duration-300 text-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-phone mr-3"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-1.18 2.19l-.7.69a19 19 0 0 0 6 6l.69-.7a2 2 0 0 1 2.19-1.18 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
-              +91 73973 63765
-            </a>
-            <a href="https://www.linkedin.com/in/ragul-sethuraman/" target="_blank" rel="noopener noreferrer" className="flex items-center text-white hover:text-blue-200 transition-colors duration-300 text-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-linkedin mr-3"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" /><rect width="4" height="12" x="2" y="9" /><circle cx="4" cy="4" r="2" /></svg>
-              LinkedIn
-            </a>
+
+          {/* 4 Clean Skill Categories */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {skillClusters.map((cluster) => {
+              const IconComp = cluster.icon;
+              return (
+                <div
+                  key={cluster.category}
+                  className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800"
+                >
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-600 dark:text-sky-400">
+                      <IconComp className="w-4 h-4" />
+                    </div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
+                      {cluster.category}
+                    </h3>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {cluster.skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="px-2.5 py-1 rounded-lg text-xs font-medium bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-2xs"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </header>
+      </section>
 
-      <main className="container mx-auto px-4 py-6 md:py-12 max-w-5xl">
-        {/* Summary Section */}
-        <section
-          id="summary"
-          ref={sectionRefs.summary}
-          className={`bg-white p-6 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('summary')}`}
-        >
-          <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-6 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user mr-4"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-            Summary
-          </h2>
-          <p className="text-lg md:text-xl leading-relaxed text-gray-700">
-            Full-Stack Developer with 3+ years of hands-on experience building scalable enterprise-grade web applications using the
-            MEAN stack (MongoDB, Express.js, Angular, Node.js) and MERN stack(MongoDB, Express.js, Node.js). Adept at designing robust RESTful APIs, integrating cloud
-            services (AWS S3), implementing CI/CD (GitHub Actions, Jenkins), and following Agile methodologies. Known for
-            delivering impactful, user-centric applications including AI-powered learning platforms and automation tools. Seeking
-            opportunities to leverage full-stack expertise to solve complex business problems.
-          </p>
-        </section>
-
-        {/* Technical Skills Section */}
-        <section
-          id="skills"
-          ref={sectionRefs.skills}
-          className={`bg-white p-6 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('skills')}`}
-        >
-          <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-6 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-wrench mr-4"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.77 3.77Z" /><path d="m14.7 6.3 1.6 1.6" /></svg>
-            Technical Skills
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Skill Category: Frontend */}
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-              <h3 className="text-2xl font-semibold text-blue-700 mb-4">Frontend</h3>
-              <ul className="space-y-2">
-                {['Angular', 'TypeScript', 'JavaScript', 'HTML', 'CSS', 'Bootstrap'].map(skill => (
-                  <li key={skill} className="flex items-center text-gray-700 text-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-2 text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></svg>
-                    {skill}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Skill Category: Backend */}
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-              <h3 className="text-2xl font-semibold text-blue-700 mb-4">Backend</h3>
-              <ul className="space-y-2">
-                {['Node.js', 'Express.js', 'REST APIs', 'Microservices'].map(skill => (
-                  <li key={skill} className="flex items-center text-gray-700 text-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-2 text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></svg>
-                    {skill}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Skill Category: Databases */}
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-              <h3 className="text-2xl font-semibold text-blue-700 mb-4">Databases</h3>
-              <ul className="space-y-2">
-                {['PostgreSQL', 'MongoDB', 'NoSQL'].map(skill => (
-                  <li key={skill} className="flex items-center text-gray-700 text-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-2 text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></svg>
-                    {skill}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Skill Category: DevOps & Cloud */}
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-              <h3 className="text-2xl font-semibold text-blue-700 mb-4">DevOps & Cloud</h3>
-              <ul className="space-y-2">
-                {['AWS (S3)', 'CI/CD (Jenkins, GitHub Actions)'].map(skill => (
-                  <li key={skill} className="flex items-center text-gray-700 text-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-2 text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></svg>
-                    {skill}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Skill Category: Tools & Version Control */}
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-              <h3 className="text-2xl font-semibold text-blue-700 mb-4">Tools & Version Control</h3>
-              <ul className="space-y-2">
-                {['Git', 'GitHub', 'GitLab', 'Confluence', 'Jira', 'VS Code', 'Visual Studio', 'Postman', 'WinSCP', 'PuTTY'].map(skill => (
-                  <li key={skill} className="flex items-center text-gray-700 text-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-2 text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></svg>
-                    {skill}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Skill Category: Monitoring & Logging */}
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-              <h3 className="text-2xl font-semibold text-blue-700 mb-4">Monitoring & Logging</h3>
-              <ul className="space-y-2">
-                {['OpenSearch'].map(skill => (
-                  <li key={skill} className="flex items-center text-gray-700 text-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-2 text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></svg>
-                    {skill}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Skill Category: Testing & Performance */}
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-              <h3 className="text-2xl font-semibold text-blue-700 mb-4">Testing & Performance</h3>
-              <ul className="space-y-2">
-                {['API Performance Optimization', 'Playwright automation'].map(skill => (
-                  <li key={skill} className="flex items-center text-gray-700 text-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-2 text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></svg>
-                    {skill}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Skill Category: Software Development & Architecture */}
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-              <h3 className="text-2xl font-semibold text-blue-700 mb-4">Software Development & Architecture</h3>
-              <ul className="space-y-2">
-                {['Full Stack Development', 'Product Development', 'Configuration Management', 'UML', 'Integration Solutions'].map(skill => (
-                  <li key={skill} className="flex items-center text-gray-700 text-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-2 text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></svg>
-                    {skill}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Skill Category: Soft Skills */}
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-              <h3 className="text-2xl font-semibold text-blue-700 mb-4">Soft Skills</h3>
-              <ul className="space-y-2">
-                {['Communication', 'Analytical Thinking', 'Problem-Solving', 'Teamwork'].map(skill => (
-                  <li key={skill} className="flex items-center text-gray-700 text-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-2 text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></svg>
-                    {skill}
-                  </li>
-                ))}
-              </ul>
-            </div>
+      {/* ===================== CERTIFICATIONS & CREDLY BADGE ===================== */}
+      <section id="awards" className="py-16 px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="mb-8 pb-4 border-b border-slate-200 dark:border-slate-800/80">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+              Verified Credentials
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-1">
+              Certifications & Google Cloud Badge
+            </h2>
           </div>
-        </section>
 
-        {/* Work Experience Section */}
-        <section
-          id="experience"
-          ref={sectionRefs.experience}
-          className={`bg-white p-6 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('experience')}`}
-        >
-          <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-6 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-briefcase mr-4"><rect width="20" height="14" x="2" y="7" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
-            Work Experience
-          </h2>
-          <div className="space-y-8">
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-              <h3 className="text-2xl font-semibold text-gray-800">Full-Stack Developer - Infosys Private Limited</h3>
-              <p className="text-md text-gray-600 mb-4">April 2022 - Present</p>
-              <ul className="list-none space-y-4">
-                <li>
-                  <span className="font-bold text-blue-700 text-xl">Project 1: Adaptive Course Creator (R-CAT)</span>
-                  <ul className="list-disc list-inside ml-6 mt-2 space-y-1 text-gray-700">
-                    <li>Developed a dynamic course platform that personalized learning paths based on user behaviour using Angular, Node.js, and MongoDB.</li>
-                    <li>Reduced user drop-off by 40% and increased engagement by 60% by integrating adaptive content delivery.</li>
-                    <li>Collaborated with cross-functional teams, enhancing product feedback loop and time-to-delivery.</li>
-                  </ul>
-                </li>
-                <li>
-                  <span className="font-bold text-blue-700 text-xl">Project 2: Cohort Management Application</span>
-                  <ul className="list-disc list-inside ml-6 mt-2 space-y-1 text-gray-700">
-                    <li>Automated the manual cohort creation process, reducing team workload by 100% and cutting admin time by 3+ hours daily.</li>
-                    <li>Designed intuitive UI components using Angular and optimized backend flows with Node.js and MongoDB.</li>
-                    <li>Received Insta Award for operational impact and innovation.</li>
-                  </ul>
-                </li>
-                <li>
-                  <span className="font-bold text-blue-700 text-xl">Project 3: AI Emulator - Game-Based Learning</span>
-                  <ul className="list-disc list-inside ml-6 mt-2 space-y-1 text-gray-700">
-                    <li>Engineered an AI-powered gamified learning platform using custom AI scoring algorithms and real-time feedback.</li>
-                    <li>Enhanced learning outcomes through gamification, boosting retention by 45% and user satisfaction by 4.8/5 in internal surveys.</li>
-                  </ul>
-                </li>
-              </ul>
+          {/* Spotlight Google Cloud Skill Badge */}
+          <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-sky-300 dark:border-sky-500/40 bg-gradient-to-r from-sky-50 via-white to-white dark:from-sky-500/10 dark:via-slate-900 dark:to-slate-900 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-500/20 border border-sky-200 dark:border-sky-500/40 flex items-center justify-center text-sky-600 dark:text-sky-400 flex-shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400 block">
+                  Google Cloud Skill Badge • Credly Verified
+                </span>
+                <h4 className="font-bold text-slate-900 dark:text-white text-base">
+                  Developing, Operating, and Securing Production-Grade Agents
+                </h4>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                  Production agent lifecycles, environment management, and security standards.
+                </p>
+              </div>
             </div>
-          </div>
-        </section>
 
-        {/* Personal Projects Section */}
-        <section
-          id="projects"
-          ref={sectionRefs.projects}
-          className={`bg-white p-8 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('projects')}`}
-        >
-          <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-6 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-rocket mr-4"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" /><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" /><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" /><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" /></svg>
-            Personal Projects
-          </h2>
-          <div className="space-y-8">
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300 relative overflow-hidden">
-              {/* Building Stage Badge */}
-              <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-bl-lg shadow-sm z-10">
-                Building Stage
+            <a
+              href="https://www.credly.com/badges/5a6d944f-7d43-4768-b2e3-768af6bcd3a9/linked_in?t=tm35ls"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-500 shadow-xs whitespace-nowrap self-start sm:self-center transition-colors"
+            >
+              <span>Verify on Credly</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
+          {/* Compact Certifications Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+            {CERTIFICATIONS.filter((c) => c.type !== 'badge').map((cert, idx) => (
+              <div
+                key={idx}
+                className="glass-panel p-4 rounded-xl border border-slate-200 dark:border-slate-800"
+              >
+                <span className="text-[10px] font-mono font-semibold text-slate-400 dark:text-slate-500 block mb-1">
+                  {cert.issuer}
+                </span>
+                <h5 className="font-bold text-slate-900 dark:text-white text-xs mb-1">
+                  {cert.title}
+                </h5>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">
+                  {cert.description}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Education Strip */}
+          <div className="mt-6 p-4 rounded-xl glass-panel border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-xs">
+            <div>
+              <span className="font-bold text-slate-900 dark:text-white">{EDUCATION.degree}</span>
+              <span className="text-slate-500 dark:text-slate-400"> — {EDUCATION.institution}</span>
+            </div>
+            <span className="text-sky-600 dark:text-sky-400 font-semibold">{EDUCATION.grade} • {EDUCATION.completionDate}</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== CONTACT SECTION ===================== */}
+      <section id="contact" className="py-16 px-4 sm:px-6 lg:px-8 relative z-10 bg-slate-100/60 dark:bg-slate-950/60">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-10">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+              Get In Touch
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-1">
+              Let's Connect
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Available for full-time senior AI engineering roles and collaborations.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            {/* Direct Contact Links */}
+            <div className="space-y-3">
+              <div className="glass-panel p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Mail className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                  <div>
+                    <span className="text-[10px] uppercase font-mono text-slate-400 block">Email</span>
+                    <a href={`mailto:${PERSONAL_INFO.email}`} className="text-xs font-semibold hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                      {PERSONAL_INFO.email}
+                    </a>
+                  </div>
+                </div>
+                <button
+                  onClick={() => copyToClipboard(PERSONAL_INFO.email, 'email')}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  title="Copy"
+                >
+                  {copiedEmail ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
               </div>
 
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
-                <h3 className="text-2xl font-semibold text-blue-700">StyleLab</h3>
-                <a href="https://styleslab.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-sm md:text-base mt-2 md:mt-0 flex items-center">
-                  Visit Website
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
-                </a>
+              <div className="glass-panel p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Phone className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                  <div>
+                    <span className="text-[10px] uppercase font-mono text-slate-400 block">Phone</span>
+                    <a href={`tel:${PERSONAL_INFO.phone}`} className="text-xs font-semibold hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">
+                      {PERSONAL_INFO.phoneDisplay}
+                    </a>
+                  </div>
+                </div>
+                <button
+                  onClick={() => copyToClipboard(PERSONAL_INFO.phone, 'phone')}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  title="Copy"
+                >
+                  {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
               </div>
 
-              <p className="text-lg text-gray-700 mb-4">
-                An AI-powered CSS generator featuring 18+ free tools including Flexbox, Grid, Gradient, and Animation generators.
-              </p>
+              <div className="glass-panel p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Linkedin className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <div>
+                    <span className="text-[10px] uppercase font-mono text-slate-400 block">LinkedIn</span>
+                    <a
+                      href={PERSONAL_INFO.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
+                    >
+                      <span>Connect on LinkedIn</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-              <ul className="list-disc list-inside space-y-2 text-gray-700">
-                <li>Comprehensive suite of CSS tools to streamline web design.</li>
-                <li>Includes performance optimization analysis and accessibility checking.</li>
-                <li>Designed for developers to quickly generate and test CSS properties.</li>
-              </ul>
+            {/* Quick Message Form */}
+            <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-3">Send a Direct Message</h4>
+
+              {formSent ? (
+                <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-center text-xs text-emerald-700 dark:text-emerald-300">
+                  Opening your email client with your message...
+                </div>
+              ) : (
+                <form onSubmit={handleFormSubmit} className="space-y-3">
+                  <input
+                    type="text"
+                    required
+                    value={formState.name}
+                    onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+                    placeholder="Your Name"
+                    className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:outline-none focus:border-sky-500 text-slate-900 dark:text-white"
+                  />
+                  <input
+                    type="email"
+                    required
+                    value={formState.email}
+                    onChange={(e) => setFormState({ ...formState, email: e.target.value })}
+                    placeholder="Your Email"
+                    className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:outline-none focus:border-sky-500 text-slate-900 dark:text-white"
+                  />
+                  <textarea
+                    required
+                    rows={3}
+                    value={formState.message}
+                    onChange={(e) => setFormState({ ...formState, message: e.target.value })}
+                    placeholder="Your message or role requirements..."
+                    className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:outline-none focus:border-sky-500 resize-none text-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-sky-600 to-cyan-500 hover:from-sky-500 hover:to-cyan-400 shadow-sm transition-all"
+                  >
+                    Send Message
+                  </button>
+                </form>
+              )}
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Achievements Section */}
-        <section
-          id="achievements"
-          ref={sectionRefs.achievements}
-          className={`bg-white p-6 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('achievements')}`}
-        >
-          <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-6 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-award mr-4"><circle cx="12" cy="8" r="6" /><path d="M15.477 12.89L17.18 21l-5.15-3.62L6.82 21l1.703-8.11" /></svg>
-            Achievements
-          </h2>
-          <div className="space-y-6">
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-              <h3 className="2xl font-semibold text-blue-700 mb-3">Award</h3>
-              <ul className="list-disc list-inside space-y-1 text-gray-700 text-lg">
-                <li>Insta Award for best contribution - Cohort Management Application (Infosys).</li>
-              </ul>
-            </div>
-            <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-              <h3 className="2xl font-semibold text-blue-700 mb-3">Certifications</h3>
-              <ul className="list-disc list-inside space-y-1 text-gray-700 text-lg">
-                <li>MEAN Stack Developer - Infosys Foundation Program</li>
-                <li>API Development using Node & Express - Infosys</li>
-                <li>Prompt Engineering - Infosys</li>
-                <li>Privacy by Design (Beginner & Intermediate) - Infosys</li>
-                <li>Fundamentals of Red Hat Enterprise Linux - Coursera</li>
-              </ul>
-            </div>
+      {/* ===================== FOOTER ===================== */}
+      <footer className="relative z-10 border-t border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8 transition-colors">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+          <div>
+            <p className="font-extrabold text-slate-900 dark:text-white">{PERSONAL_INFO.name}</p>
+            <p className="text-slate-500 dark:text-slate-400">{PERSONAL_INFO.role} ({expInfo.displayYears})</p>
           </div>
-        </section>
 
-        {/* Education Section */}
-        <section
-          id="education"
-          ref={sectionRefs.education}
-          className={`bg-white p-6 md:p-10 rounded-xl shadow-lg mb-12 transform transition-all duration-700 ${getAnimationClasses('education')}`}
-        >
-          <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-6 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-graduation-cap mr-4"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v4c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2v-4" /><path d="M12 22v-6" /></svg>
-            Education
-          </h2>
-          <div className="bg-blue-50 p-6 rounded-lg shadow-inner hover:shadow-md transition-shadow duration-300">
-            <h3 className="text-2xl font-semibold text-gray-800">Prince Shri Venkateshwara Padmavathy Engineering College</h3>
-            <p className="text-lg text-gray-600">Chennai</p>
-            <p className="text-lg text-gray-600 mb-2">Bachelors in Mechanical Engineering - CGPA - 8.2</p>
-            <p className="text-lg text-gray-600">May 2021</p>
+          <div className="flex items-center gap-5 text-slate-600 dark:text-slate-400">
+            <a href="#work" className="hover:text-sky-600 dark:hover:text-white transition-colors">Work</a>
+            <a href="#skills" className="hover:text-sky-600 dark:hover:text-white transition-colors">Skills</a>
+            <a href="#awards" className="hover:text-sky-600 dark:hover:text-white transition-colors">Certifications</a>
+            <a href="#contact" className="hover:text-sky-600 dark:hover:text-white transition-colors">Contact</a>
           </div>
-        </section>
-      </main>
 
-      {/* Back to Top Button */}
+          <div className="text-slate-400 dark:text-slate-500">
+            &copy; {new Date().getFullYear()} {PERSONAL_INFO.name}
+          </div>
+        </div>
+      </footer>
+
+      {/* Back to Top Floating Button */}
       {showBackToTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-4 right-4 md:bottom-8 md:right-8 bg-blue-600 text-white p-3 md:p-4 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 z-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75"
+          className="fixed bottom-6 right-6 z-40 p-2.5 rounded-full bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 hover:text-white hover:bg-sky-600 dark:hover:bg-sky-600 border border-slate-200 dark:border-slate-800 shadow-lg transition-all"
           aria-label="Back to top"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-up"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></svg>
+          <ArrowUp className="w-4 h-4" />
         </button>
       )}
 
-      {/* Footer */}
-      <footer className="bg-blue-900 text-white p-6 text-center rounded-t-3xl shadow-xl">
-        <p className="text-lg">&copy; {new Date().getFullYear()} Ragul Sethuraman. All rights reserved.</p>
-      </footer>
+      {/* Resume Modal */}
+      <ResumeModal isOpen={isResumeOpen} onClose={() => setIsResumeOpen(false)} />
     </div>
   );
 }
